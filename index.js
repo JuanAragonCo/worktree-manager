@@ -30,8 +30,7 @@ function getMainBranch(cwd) {
 }
 
 function updateBranch(branchName) {
-  exec(`git fetch origin ${branchName}:${branchName} 2>&1`)
-
+  exec(`git fetch origin ${branchName}:${branchName} --update-head-ok 2>&1`)
 }
 
 function getUpdatedFiles(worktree, mainBranch) {
@@ -90,7 +89,7 @@ function removeWorktree(name, branch) {
 function enrichWorktrees(trees, mainBranch) {
   return trees.map(tree => {
     const isMain = tree.branch === mainBranch;
-    const isSafe = !tree.isBare && !getUpdatedFiles(tree.name, mainBranch).length
+    const isSafe = !tree.isBare && !isMain && !getUpdatedFiles(tree.name, mainBranch).length
     const shortName = tree.name.split('/').slice(-1)
 
     return {
@@ -124,7 +123,11 @@ program
       const mainBranch = getMainBranch(bareTree.name);
 
       if (opts.fetch && opts.enrich) {
-        updateBranch(mainBranch)
+        try {
+          updateBranch(mainBranch)
+        } catch (err) {
+          console.log(chalk.yellow(`It wasn't possible to fetch "${mainBranch}"`))
+        }
       }
 
       let enriched = wts
@@ -220,7 +223,11 @@ program
     if (opts.fetch) {
       console.log(chalk.blue(`Fetching "${bareBranch.name}" branch...`))
       const mainBranch = getMainBranch(bareBranch.name);
-      updateBranch(mainBranch)
+      try {
+        updateBranch(mainBranch)
+      } catch (err) {
+        console.log(chalk.yellow(`It wasn't possible to fetch "${mainBranch}"`))
+      }
     }
 
 
