@@ -5,12 +5,14 @@ import json from '@rollup/plugin-json';
 export default {
   input: "index.js",
   output: {
-	file: "dist/bundle.cjs",
-	format: "cjs",
+	file: "dist/bundle.mjs",
+	format: "es",
 	sourcemap: true
   },
   plugins: [
-    resolve(),
+    resolve({
+      exportConditions: ['node'] // This is important to Chalk resolves to the node version insteda of the browser one
+    }),
     commonjs(),
     json()
   ],

@@ -69,9 +69,14 @@ function listWorktrees() {
   })
 }
 
-function formatWorktree(name, isMain, isSafe) {
-  const shortName = name.split('/').slice(-1)
-  return chalk.yellow(`-> ${shortName}${isMain ? chalk.blue(" (Main worktree)") : ""}${isSafe ? chalk.greenBright(" (Safe to delete)") : ""}`)
+function formatWorktree(wt) {
+  const shortName = wt.name.split('/').slice(-1)
+
+  if (wt.isSafe) {
+    return chalk.blue(`-> ${shortName}${wt.isMain ? chalk.yellow(' (Main Worktree)') :''}${wt.updatedFiles.length ? ` ${wt.updatedFiles.length} changes` : ''}`)
+  } else {
+    return chalk.red(`-> ${shortName} (Unsafe to remove)`)
+  }
 }
 
 function removeWorktree(name, branch) {
@@ -108,7 +113,7 @@ program
   .command('list')
   .description('Lists worktrees inside the current directory')
   .option('--no-fetch', 'Disables fetching the main branch before running')
-  .option('-n, --no-enrich', 'No check for safety deletion, or main branch')
+  .option('-n, --no-enrich', 'Disables checks for safety deletion, or main branch')
   .action((opts) => {
     try {
 
@@ -138,9 +143,9 @@ program
       }
 
       console.log(chalk.blueBright(`Found ${enriched.length - 1} worktrees:`))
-      for (const { name, isBare, isMain, isSafe } of enriched) {
-        if (isBare) continue;
-        console.log(formatWorktree(name, isMain, isSafe))
+      for (const wt of enriched) {
+        if (wt.isBare) continue;
+        console.log(formatWorktree(wt))
       }
     } catch (err) {
       console.error(err)
@@ -182,7 +187,7 @@ program
       choices: validOptions.map(wt => {
 
         return {
-          name: formatWorktree(wt.name, wt.isMain, wt.isSafe),
+          name: formatWorktree(wt),
           value: wt
         }
       })
@@ -259,7 +264,7 @@ program
     const mainBranch = getMainBranch(bareBranch.name);
     const enriched = enrichWorktrees(wts, mainBranch);
 
-    const valid = enriched.filter(wt => !!wt.updatedFiles)
+    const valid = enriched.filter(wt => !!wt.updatedFiles.length)
     if (!valid.length) {
       console.log(chalk.blue('There are no changes branches'))
       return;
@@ -269,7 +274,7 @@ program
       message: 'Select which branch you want to inspect:',
       choices: valid.map(wt => ({
         value: wt,
-        name: formatWorktree(wt.name, wt.isMain, wt.isSafe)
+        name: formatWorktree(wt)
       }))
     });
 
