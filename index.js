@@ -35,7 +35,7 @@ function updateBranch(branchName) {
 
 function getUpdatedFiles(worktree, mainBranch) {
   function execInWorktree(cmd) {
-    return exec(cmd, { cwd: worktree })
+    return execSync(cmd, { cwd: worktree })
   }
 
   try {
@@ -89,14 +89,16 @@ function removeWorktree(name, branch) {
 function enrichWorktrees(trees, mainBranch) {
   return trees.map(tree => {
     const isMain = tree.branch === mainBranch;
-    const isSafe = !tree.isBare && !isMain && !getUpdatedFiles(tree.name, mainBranch).length
+    const updatedFiles = !tree.isBare && !tree.isMain ? getUpdatedFiles(tree.name, mainBranch) : 0;
+    const isSafe = !tree.isBare && !isMain && !updatedFiles.length
     const shortName = tree.name.split('/').slice(-1)
 
     return {
       ...tree,
       isMain,
       isSafe,
-      shortName
+      shortName,
+      updatedFiles
     }
   })
     
@@ -243,6 +245,42 @@ program
     console.log(chalk.greenBright(`Worktree ${s_name}(${s_branchName}) created!`))
     changeWorkDir(s_name)
     console.log(chalk.greenBright(`Change working directory to "${s_name}"`))
+  })
+
+program
+  .command('inspect')
+  .action(async () => {
+    const wts = listWorktrees();
+    const bareBranch = wts.find(wt => wt.isBare);
+    if (!bareBranch) {
+      console.log(chalk.red('This is not a valid worktree'))
+      return;
+    }
+    const mainBranch = getMainBranch(bareBranch.name);
+    const enriched = enrichWorktrees(wts, mainBranch);
+
+    const valid = enriched.filter(wt => !!wt.updatedFiles)
+    if (!valid.length) {
+      console.log(chalk.blue('There are no changes branches'))
+      return;
+    }
+
+    const selection = await select({
+      message: 'Select which branch you want to inspect:',
+      choices: valid.map(wt => ({
+        value: wt,
+        name: formatWorktree(wt.name, wt.isMain, wt.isSafe)
+      }))
+    });
+
+    console.log(chalk.bold('---'))
+    console.log(
+      chalk.blueBright(
+        selection.updatedFiles
+          .map(file => `- ${file}`)
+          .join('\n')
+      )
+    )
   })
 
 program.parse();
