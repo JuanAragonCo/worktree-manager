@@ -75,7 +75,7 @@ function formatWorktree(wt) {
   if (wt.isSafe) {
     return chalk.white(`-> ${shortName}${wt.isMain ? chalk.yellow(' (Main Worktree)') :''}`)
   } else {
-    return chalk.yellowBright(`-> ${shortName} (Unsafe to remove: ${wt.updatedFiles.length} file${wt.updatedFiles.length === 1 ? '' : 's'})`)
+    return chalk.magenta(`-> ${shortName} (Unsafe to remove: ${wt.updatedFiles.length} file${wt.updatedFiles.length === 1 ? '' : 's'})`)
   }
 }
 
