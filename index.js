@@ -73,9 +73,9 @@ function formatWorktree(wt) {
   const shortName = wt.name.split('/').slice(-1)
 
   if (wt.isSafe) {
-    return chalk.blue(`-> ${shortName}${wt.isMain ? chalk.yellow(' (Main Worktree)') :''}${wt.updatedFiles.length ? ` ${wt.updatedFiles.length} changes` : ''}`)
+    return chalk.white(`-> ${shortName}${wt.isMain ? chalk.yellow(' (Main Worktree)') :''}${wt.updatedFiles.length ? ` ${wt.updatedFiles.length} changes` : ''}`)
   } else {
-    return chalk.red(`-> ${shortName} (Unsafe to remove)`)
+    return chalk.redBright(`-> ${shortName} (Unsafe to remove)`)
   }
 }
 
