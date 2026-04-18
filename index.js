@@ -5,6 +5,7 @@ import process from 'node:process';
 import { program } from 'commander'
 import { execSync } from 'node:child_process'
 import { select, confirm, input } from '@inquirer/prompts';
+import { version } from './package.json';
 
 function exec(command, options) {
   try {
@@ -108,6 +109,8 @@ function enrichWorktrees(trees, mainBranch) {
   })
     
 }
+
+program.version(version, '-v, --version', 'Outputs the current version')
 
 program
   .command('list')
