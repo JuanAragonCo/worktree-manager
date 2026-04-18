@@ -73,23 +73,35 @@ function listWorktrees() {
 function formatWorktree(wt) {
   const shortName = wt.name.split('/').slice(-1)
 
-  if (wt.isSafe) {
-    return chalk.white(`-> ${shortName}${wt.isMain ? chalk.yellow(' (Main Worktree)') :''}`)
+  const branch = chalk.cyan(`[${wt.branch}]`);
+
+  if (wt.updatedFiles === undefined) {
+    return chalk.white(`-> ${shortName} ${branch}`)
+  } else if (wt.isSafe) {
+    return chalk.white(`-> ${shortName} ${branch}${wt.isMain ? chalk.yellow(' (Main Worktree)') : ''}`)
   } else {
-    return chalk.magenta(`-> ${shortName} (Unsafe to remove: ${wt.updatedFiles.length} file${wt.updatedFiles.length === 1 ? '' : 's'})`)
+    return chalk.magenta(`-> ${shortName} ${branch} (Unsafe to remove: ${wt.updatedFiles.length} file${wt.updatedFiles.length === 1 ? '' : 's'})`)
   }
 }
 
-function removeWorktree(name, branch) {
-
+async function removeWorktree(name, branch) {
   const cwd = process.cwd();
 
   if (name === cwd) {
     throw new Error(`Navigate to another directory before removing: ${name}`)
   }
-  
+
   exec(`git worktree remove ${name} 2>&1`)
   exec(`git branch -D ${branch} 2>&1`)
+
+  const remoteBranches = listRemoteBranches();
+
+  const remoteBranch = remoteBranches.find(brnch => brnch.branchName === branch);
+  const deleteBranch = remoteBranch && await confirm({ message: `Do you wish to delete the remote? (${remoteBranch.branchName})` })
+  if (deleteBranch) {
+    exec(`git push --delete origin ${remoteBranch.branchName}`)
+    console.log(chalk.green(`Remote branch "${remoteBranch.branchName}" removed`))
+  }
 }
 
 function enrichWorktrees(trees, mainBranch) {
@@ -97,7 +109,7 @@ function enrichWorktrees(trees, mainBranch) {
     const isMain = tree.branch === mainBranch;
     const updatedFiles = !tree.isBare && !tree.isMain ? getUpdatedFiles(tree.name, mainBranch) : 0;
     const isSafe = !tree.isBare && !isMain && !updatedFiles.length
-    const shortName = tree.name.split('/').slice(-1)
+    const shortName = tree.name.split('/').slice(-1).join('')
 
     return {
       ...tree,
@@ -107,7 +119,7 @@ function enrichWorktrees(trees, mainBranch) {
       updatedFiles
     }
   })
-    
+
 }
 
 program.version(version, '-v, --version', 'Outputs the current version')
@@ -141,7 +153,7 @@ program
       }
 
       let enriched = wts
-      if (opts.enrich){
+      if (opts.enrich) {
         enriched = enrichWorktrees(wts, mainBranch);
       }
 
@@ -155,6 +167,20 @@ program
     }
 
   })
+
+function listRemoteBranches() {
+  const result = exec('git ls-remote --branches 2>&1').toString();
+  const lines = result.split('\n').slice(1);
+
+  return lines.map(line => {
+    const [hash, branchName] = line.split(/\s+/);
+
+    return {
+      hash,
+      branchName: branchName && branchName.replace('refs/heads/', '')
+    }
+  })
+}
 
 program
   .command('remove')
@@ -171,11 +197,11 @@ program
     const enriched = enrichWorktrees(wts, mainBranch);
 
     if (opts.allSafe) {
-      enriched.forEach(wt => {
-        if (!wt.isSafe || wt.isBare) return;
-        removeWorktree(wt.name, wt.branch)
+      for (const wt of enriched) {
+        if (!wt.isSafe || wt.isBare) continue;
+        await removeWorktree(wt.name, wt.branch)
         console.log(chalk.greenBright(`${wt.name} removed successfully!`))
-      })
+      }
       return;
     }
 
@@ -202,7 +228,7 @@ program
         return console.log(chalk.yellowBright("The branch was not removed"))
     }
 
-    removeWorktree(selection.name, selection.branch)
+    await removeWorktree(selection.name, selection.branch)
     console.log(chalk.greenBright('Worktree removed!'))
   })
 
