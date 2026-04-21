@@ -45,12 +45,12 @@ function getUpdatedFiles(worktree, mainBranch) {
     //We don't care if this fails
   }
   const result = execInWorktree(`git diff ${mainBranch} --name-only`).toString()
-  if (result === "") return [];
   try {
     execInWorktree('git merge --abort 2>&1')
   } catch {
     //We don't care if this fails
   }
+  if (result === "") return [];
   return result.split('\n').filter(a => !!a);
 }
 
