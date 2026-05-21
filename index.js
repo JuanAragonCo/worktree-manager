@@ -131,7 +131,6 @@ program
   .option('-n, --no-enrich', 'Disables checks for safety deletion, or main branch')
   .action((opts) => {
     try {
-
       const wts = listWorktrees();
       const bareTree = wts.find(tree => tree.isBare)
       if (!bareTree) {
@@ -193,6 +192,7 @@ program
       throw new Error("This is not a worktree")
     }
     const mainBranch = getMainBranch(bareTree.name);
+    updateBranch(mainBranch)
 
     const enriched = enrichWorktrees(wts, mainBranch);
 
