@@ -168,7 +168,7 @@ program
   })
 
 function listRemoteBranches() {
-  const result = exec('git ls-remote --branches 2>&1').toString();
+  const result = exec('git ls-remote --head 2>&1').toString();
   const lines = result.split('\n').slice(1);
 
   return lines.map(line => {
